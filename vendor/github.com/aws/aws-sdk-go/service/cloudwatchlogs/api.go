@@ -669,6 +669,8 @@ func (c *CloudWatchLogs) CreateLogGroupRequest(input *CreateLogGroupInput) (req 
 //     '_' (underscore), '-' (hyphen), '/' (forward slash), '.' (period), and
 //     '#' (number sign)
 //
+//   - Log group names can't start with the string aws/
+//
 // When you create a log group, by default the log events in the log group do
 // not expire. To set a retention policy so that events expire and are deleted
 // after a specified time, use PutRetentionPolicy (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutRetentionPolicy.html).
@@ -879,10 +881,18 @@ func (c *CloudWatchLogs) DeleteAccountPolicyRequest(input *DeleteAccountPolicyIn
 
 // DeleteAccountPolicy API operation for Amazon CloudWatch Logs.
 //
-// Deletes a CloudWatch Logs account policy.
+// Deletes a CloudWatch Logs account policy. This stops the policy from applying
+// to all log groups or a subset of log groups in the account. Log-group level
+// policies will still be in effect.
 //
-// To use this operation, you must be signed on with the logs:DeleteDataProtectionPolicy
-// and logs:DeleteAccountPolicy permissions.
+// To use this operation, you must be signed on with the correct permissions
+// depending on the type of policy that you are deleting.
+//
+//   - To delete a data protection policy, you must have the logs:DeleteDataProtectionPolicy
+//     and logs:DeleteAccountPolicy permissions.
+//
+//   - To delete a subscription filter policy, you must have the logs:DeleteSubscriptionFilter
+//     and logs:DeleteAccountPolicy permissions.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -2355,6 +2365,15 @@ func (c *CloudWatchLogs) DescribeDeliveriesRequest(input *DescribeDeliveriesInpu
 // DescribeDeliveries API operation for Amazon CloudWatch Logs.
 //
 // Retrieves a list of the deliveries that have been created in the account.
+//
+// A delivery is a connection between a delivery source (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutDeliverySource.html)
+// and a delivery destination (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutDeliveryDestination.html).
+//
+// A delivery source represents an Amazon Web Services resource that sends logs
+// to an logs delivery destination. The destination can be CloudWatch Logs,
+// Amazon S3, or Kinesis Data Firehose. Only some Amazon Web Services services
+// support being configured as a delivery source. These services are listed
+// in Enable logging from Amazon Web Services services. (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/AWS-logs-and-resource-policy.html)
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -4231,8 +4250,15 @@ func (c *CloudWatchLogs) GetDeliveryRequest(input *GetDeliveryInput) (req *reque
 
 // GetDelivery API operation for Amazon CloudWatch Logs.
 //
-// Returns complete information about one delivery. A delivery is a connection
-// between a logical delivery source and a logical delivery destination
+// Returns complete information about one logical delivery. A delivery is a
+// connection between a delivery source (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutDeliverySource.html)
+// and a delivery destination (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutDeliveryDestination.html).
+//
+// A delivery source represents an Amazon Web Services resource that sends logs
+// to an logs delivery destination. The destination can be CloudWatch Logs,
+// Amazon S3, or Kinesis Data Firehose. Only some Amazon Web Services services
+// support being configured as a delivery source. These services are listed
+// in Enable logging from Amazon Web Services services. (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/AWS-logs-and-resource-policy.html)
 //
 // You need to specify the delivery id in this operation. You can find the IDs
 // of the deliveries in your account with the DescribeDeliveries (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_DescribeDeliveries.html)
@@ -5619,10 +5645,14 @@ func (c *CloudWatchLogs) PutAccountPolicyRequest(input *PutAccountPolicyInput) (
 
 // PutAccountPolicy API operation for Amazon CloudWatch Logs.
 //
-// Creates an account-level data protection policy that applies to all log groups
-// in the account. A data protection policy can help safeguard sensitive data
-// that's ingested by your log groups by auditing and masking the sensitive
-// log data. Each account can have only one account-level policy.
+// Creates an account-level data protection policy or subscription filter policy
+// that applies to all log groups or a subset of log groups in the account.
+//
+// # Data protection policy
+//
+// A data protection policy can help safeguard sensitive data that's ingested
+// by your log groups by auditing and masking the sensitive log data. Each account
+// can have only one account-level data protection policy.
 //
 // Sensitive data is detected and masked when it is ingested into a log group.
 // When you set a data protection policy, log events ingested into the log groups
@@ -5630,7 +5660,7 @@ func (c *CloudWatchLogs) PutAccountPolicyRequest(input *PutAccountPolicyInput) (
 //
 // If you use PutAccountPolicy to create a data protection policy for your whole
 // account, it applies to both existing log groups and all log groups that are
-// created later in this account. The account policy is applied to existing
+// created later in this account. The account-level policy is applied to existing
 // log groups with eventual consistency. It might take up to 5 minutes before
 // sensitive data in existing log groups begins to be masked.
 //
@@ -5646,15 +5676,46 @@ func (c *CloudWatchLogs) PutAccountPolicyRequest(input *PutAccountPolicyInput) (
 // For more information, including a list of types of data that can be audited
 // and masked, see Protect sensitive log data with masking (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/mask-sensitive-log-data.html).
 //
-// To use the PutAccountPolicy operation, you must be signed on with the logs:PutDataProtectionPolicy
-// and logs:PutAccountPolicy permissions.
+// To use the PutAccountPolicy operation for a data protection policy, you must
+// be signed on with the logs:PutDataProtectionPolicy and logs:PutAccountPolicy
+// permissions.
 //
 // The PutAccountPolicy operation applies to all log groups in the account.
-// You can also use PutDataProtectionPolicy (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutDataProtectionPolicy.html)
+// You can use PutDataProtectionPolicy (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutDataProtectionPolicy.html)
 // to create a data protection policy that applies to just one log group. If
 // a log group has its own data protection policy and the account also has an
 // account-level data protection policy, then the two policies are cumulative.
 // Any sensitive term specified in either policy is masked.
+//
+// # Subscription filter policy
+//
+// A subscription filter policy sets up a real-time feed of log events from
+// CloudWatch Logs to other Amazon Web Services services. Account-level subscription
+// filter policies apply to both existing log groups and log groups that are
+// created later in this account. Supported destinations are Kinesis Data Streams,
+// Kinesis Data Firehose, and Lambda. When log events are sent to the receiving
+// service, they are Base64 encoded and compressed with the GZIP format.
+//
+// The following destinations are supported for subscription filters:
+//
+//   - An Kinesis Data Streams data stream in the same account as the subscription
+//     policy, for same-account delivery.
+//
+//   - An Kinesis Data Firehose data stream in the same account as the subscription
+//     policy, for same-account delivery.
+//
+//   - A Lambda function in the same account as the subscription policy, for
+//     same-account delivery.
+//
+//   - A logical destination in a different account created with PutDestination
+//     (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutDestination.html),
+//     for cross-account delivery. Kinesis Data Streams and Kinesis Data Firehose
+//     are supported as logical destinations.
+//
+// Each account can have one account-level subscription filter policy. If you
+// are updating an existing filter, you must specify the correct name in PolicyName.
+// To perform a PutAccountPolicy subscription filter operation for any destination
+// except a Lambda function, you must also have the iam:PassRole permission.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -7137,6 +7198,9 @@ func (c *CloudWatchLogs) StartLiveTailRequest(input *StartLiveTailInput) (req *r
 // by closing the client that is receiving the stream. The session also ends
 // if the established connection between the client and the server breaks.
 //
+// For examples of using an SDK to start a Live Tail session, see Start a Live
+// Tail session using an Amazon Web Services SDK (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/example_cloudwatch-logs_StartLiveTail_section.html).
+//
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
@@ -8341,6 +8405,9 @@ type AccountPolicy struct {
 
 	// The scope of the account policy.
 	Scope *string `locationName:"scope" type:"string" enum:"Scope"`
+
+	// The log group selection criteria for this subscription filter policy.
+	SelectionCriteria *string `locationName:"selectionCriteria" type:"string"`
 }
 
 // String returns the string representation.
@@ -8394,6 +8461,12 @@ func (s *AccountPolicy) SetPolicyType(v string) *AccountPolicy {
 // SetScope sets the Scope field's value.
 func (s *AccountPolicy) SetScope(v string) *AccountPolicy {
 	s.Scope = &v
+	return s
+}
+
+// SetSelectionCriteria sets the SelectionCriteria field's value.
+func (s *AccountPolicy) SetSelectionCriteria(v string) *AccountPolicy {
+	s.SelectionCriteria = &v
 	return s
 }
 
@@ -9464,7 +9537,7 @@ type CreateLogGroupInput struct {
 	//
 	// If you omit this parameter, the default of STANDARD is used.
 	//
-	// After a log group is created, its class can't be changed.
+	// The value of logGroupClass can't be changed after a log group is created.
 	//
 	// For details about the features supported by each class, see Log classes (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch_Logs_Log_Classes.html)
 	LogGroupClass *string `locationName:"logGroupClass" type:"string" enum:"LogGroupClass"`
@@ -9735,7 +9808,7 @@ type DeleteAccountPolicyInput struct {
 	// PolicyName is a required field
 	PolicyName *string `locationName:"policyName" type:"string" required:"true"`
 
-	// The type of policy to delete. Currently, the only valid value is DATA_PROTECTION_POLICY.
+	// The type of policy to delete.
 	//
 	// PolicyType is a required field
 	PolicyType *string `locationName:"policyType" type:"string" required:"true" enum:"PolicyType"`
@@ -11220,8 +11293,7 @@ type DescribeAccountPoliciesInput struct {
 	PolicyName *string `locationName:"policyName" type:"string"`
 
 	// Use this parameter to limit the returned policies to only the policies that
-	// match the policy type that you specify. Currently, the only valid value is
-	// DATA_PROTECTION_POLICY.
+	// match the policy type that you specify.
 	//
 	// PolicyType is a required field
 	PolicyType *string `locationName:"policyType" type:"string" required:"true" enum:"PolicyType"`
@@ -15625,7 +15697,16 @@ func (s *LiveTailSessionUpdate) MarshalEvent(pm protocol.PayloadMarshaler) (msg 
 type LogGroup struct {
 	_ struct{} `type:"structure"`
 
-	// The Amazon Resource Name (ARN) of the log group.
+	// The Amazon Resource Name (ARN) of the log group. This version of the ARN
+	// includes a trailing :* after the log group name.
+	//
+	// Use this version to refer to the ARN in IAM policies when specifying permissions
+	// for most API actions. The exception is when specifying permissions for TagResource
+	// (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_TagResource.html),
+	// UntagResource (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_UntagResource.html),
+	// and ListTagsForResource (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_ListTagsForResource.html).
+	// The permissions for those three actions require the ARN version that doesn't
+	// include a trailing :*.
 	Arn *string `locationName:"arn" type:"string"`
 
 	// The creation time of the log group, expressed as the number of milliseconds
@@ -15643,6 +15724,20 @@ type LogGroup struct {
 	// The Amazon Resource Name (ARN) of the KMS key to use when encrypting log
 	// data.
 	KmsKeyId *string `locationName:"kmsKeyId" type:"string"`
+
+	// The Amazon Resource Name (ARN) of the log group. This version of the ARN
+	// doesn't include a trailing :* after the log group name.
+	//
+	// Use this version to refer to the ARN in the following situations:
+	//
+	//    * In the logGroupIdentifier input field in many CloudWatch Logs APIs.
+	//
+	//    * In the resourceArn field in tagging APIs
+	//
+	//    * In IAM policies, when specifying permissions for TagResource (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_TagResource.html),
+	//    UntagResource (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_UntagResource.html),
+	//    and ListTagsForResource (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_ListTagsForResource.html).
+	LogGroupArn *string `locationName:"logGroupArn" type:"string"`
 
 	// This specifies the log group class for this log group. There are two classes:
 	//
@@ -15717,6 +15812,12 @@ func (s *LogGroup) SetInheritedProperties(v []*string) *LogGroup {
 // SetKmsKeyId sets the KmsKeyId field's value.
 func (s *LogGroup) SetKmsKeyId(v string) *LogGroup {
 	s.KmsKeyId = &v
+	return s
+}
+
+// SetLogGroupArn sets the LogGroupArn field's value.
+func (s *LogGroup) SetLogGroupArn(v string) *LogGroup {
+	s.LogGroupArn = &v
 	return s
 }
 
@@ -16441,9 +16542,11 @@ func (s *Policy) SetDeliveryDestinationPolicy(v string) *Policy {
 type PutAccountPolicyInput struct {
 	_ struct{} `type:"structure"`
 
-	// Specify the data protection policy, in JSON.
+	// Specify the policy, in JSON.
 	//
-	// This policy must include two JSON blocks:
+	// Data protection policy
+	//
+	// A data protection policy must include two JSON blocks:
 	//
 	//    * The first block must include both a DataIdentifer array and an Operation
 	//    property with an Audit action. The DataIdentifer array lists the types
@@ -16472,7 +16575,35 @@ type PutAccountPolicyInput struct {
 	// policyName parameter, and is used as a dimension when CloudWatch Logs reports
 	// audit findings metrics to CloudWatch.
 	//
-	// The JSON specified in policyDocument can be up to 30,720 characters.
+	// The JSON specified in policyDocument can be up to 30,720 characters long.
+	//
+	// Subscription filter policy
+	//
+	// A subscription filter policy can include the following attributes in a JSON
+	// block:
+	//
+	//    * DestinationArn The ARN of the destination to deliver log events to.
+	//    Supported destinations are: An Kinesis Data Streams data stream in the
+	//    same account as the subscription policy, for same-account delivery. An
+	//    Kinesis Data Firehose data stream in the same account as the subscription
+	//    policy, for same-account delivery. A Lambda function in the same account
+	//    as the subscription policy, for same-account delivery. A logical destination
+	//    in a different account created with PutDestination (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutDestination.html),
+	//    for cross-account delivery. Kinesis Data Streams and Kinesis Data Firehose
+	//    are supported as logical destinations.
+	//
+	//    * RoleArn The ARN of an IAM role that grants CloudWatch Logs permissions
+	//    to deliver ingested log events to the destination stream. You don't need
+	//    to provide the ARN when you are working with a logical destination for
+	//    cross-account delivery.
+	//
+	//    * FilterPattern A filter pattern for subscribing to a filtered stream
+	//    of log events.
+	//
+	//    * DistributionThe method used to distribute log data to the destination.
+	//    By default, log data is grouped by log stream, but the grouping can be
+	//    set to Random for a more even distribution. This property is only applicable
+	//    when the destination is an Kinesis Data Streams data stream.
 	//
 	// PolicyDocument is a required field
 	PolicyDocument *string `locationName:"policyDocument" type:"string" required:"true"`
@@ -16482,7 +16613,7 @@ type PutAccountPolicyInput struct {
 	// PolicyName is a required field
 	PolicyName *string `locationName:"policyName" type:"string" required:"true"`
 
-	// Currently the only valid value for this parameter is DATA_PROTECTION_POLICY.
+	// The type of policy that you're creating or updating.
 	//
 	// PolicyType is a required field
 	PolicyType *string `locationName:"policyType" type:"string" required:"true" enum:"PolicyType"`
@@ -16491,6 +16622,18 @@ type PutAccountPolicyInput struct {
 	// that the data protection policy applies to all log groups in the account.
 	// If you omit this parameter, the default of ALL is used.
 	Scope *string `locationName:"scope" type:"string" enum:"Scope"`
+
+	// Use this parameter to apply the subscription filter policy to a subset of
+	// log groups in the account. Currently, the only supported filter is LogGroupName
+	// NOT IN []. The selectionCriteria string can be up to 25KB in length. The
+	// length is determined by using its UTF-8 bytes.
+	//
+	// Using the selectionCriteria parameter is useful to help prevent infinite
+	// loops. For more information, see Log recursion prevention (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/Subscriptions-recursion-prevention.html).
+	//
+	// Specifing selectionCriteria is valid only when you specify SUBSCRIPTION_FILTER_POLICY
+	// for policyType.
+	SelectionCriteria *string `locationName:"selectionCriteria" type:"string"`
 }
 
 // String returns the string representation.
@@ -16551,6 +16694,12 @@ func (s *PutAccountPolicyInput) SetPolicyType(v string) *PutAccountPolicyInput {
 // SetScope sets the Scope field's value.
 func (s *PutAccountPolicyInput) SetScope(v string) *PutAccountPolicyInput {
 	s.Scope = &v
+	return s
+}
+
+// SetSelectionCriteria sets the SelectionCriteria field's value.
+func (s *PutAccountPolicyInput) SetSelectionCriteria(v string) *PutAccountPolicyInput {
+	s.SelectionCriteria = &v
 	return s
 }
 
@@ -16953,8 +17102,8 @@ func (s *PutDeliveryDestinationPolicyOutput) SetPolicy(v *Policy) *PutDeliveryDe
 type PutDeliverySourceInput struct {
 	_ struct{} `type:"structure"`
 
-	// Defines the type of log that the source is sending. For valid values for
-	// this parameter, see the documentation for the source service.
+	// Defines the type of log that the source is sending. For Amazon CodeWhisperer,
+	// the valid value is EVENT_LOGS.
 	//
 	// LogType is a required field
 	LogType *string `locationName:"logType" min:"1" type:"string" required:"true"`
@@ -19042,12 +19191,17 @@ type StartLiveTailInput struct {
 	// have names that start with the prefixes that you specify here are included
 	// in the Live Tail session.
 	//
+	// If you specify this field, you can't also specify the logStreamNames field.
+	//
 	// You can specify this parameter only if you specify only one log group in
 	// logGroupIdentifiers.
 	LogStreamNamePrefixes []*string `locationName:"logStreamNamePrefixes" min:"1" type:"list"`
 
 	// If you specify this parameter, then only log events in the log streams that
 	// you specify here are included in the Live Tail session.
+	//
+	// If you specify this field, you can't also specify the logStreamNamePrefixes
+	// field.
 	//
 	// You can specify this parameter only if you specify only one log group in
 	// logGroupIdentifiers.
@@ -20916,12 +21070,16 @@ func OutputFormat_Values() []string {
 const (
 	// PolicyTypeDataProtectionPolicy is a PolicyType enum value
 	PolicyTypeDataProtectionPolicy = "DATA_PROTECTION_POLICY"
+
+	// PolicyTypeSubscriptionFilterPolicy is a PolicyType enum value
+	PolicyTypeSubscriptionFilterPolicy = "SUBSCRIPTION_FILTER_POLICY"
 )
 
 // PolicyType_Values returns all elements of the PolicyType enum
 func PolicyType_Values() []string {
 	return []string{
 		PolicyTypeDataProtectionPolicy,
+		PolicyTypeSubscriptionFilterPolicy,
 	}
 }
 
